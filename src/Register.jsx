@@ -113,9 +113,8 @@ const Register = () => {
               value={formData.email}
               onChange={handleChange}
               placeholder="you@example.com"
-              className={`w-full px-3.5 py-2.5 pr-24 border rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors ${
-                serverError ? "border-red-400" : "border-slate-300"
-              }`}
+              className={`w-full px-3.5 py-2.5 pr-24 border rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors ${serverError ? "border-red-400" : "border-slate-300"
+                }`}
             />
             <button
               type="button"
@@ -185,9 +184,8 @@ const Register = () => {
 
         <button
           type="submit"
-          className={`bg-blue-600 text-white py-2.5 rounded-lg w-full text-sm font-semibold hover:opacity-90 transition-opacity ${
-            !otpVerified || isSuccess ? "opacity-50 cursor-not-allowed" : ""
-          }`}
+          className={`bg-blue-600 text-white py-2.5 rounded-lg w-full text-sm font-semibold hover:opacity-90 transition-opacity ${!otpVerified || isSuccess ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           disabled={!otpVerified || isSuccess}
         >
           {isSuccess ? "Registration successful" : "Create account"}
@@ -211,8 +209,13 @@ const Register = () => {
       <div className="flex justify-center">
         <GoogleLogin
           onSuccess={async (credentialResponse) => {
-            const data = await loginWithGoogle(credentialResponse.credential);
-            if (!data.error) navigate("/drive");
+            try {
+              const data = await loginWithGoogle(credentialResponse.credential);
+              if (!data.error) navigate("/drive");
+            } catch (err) {
+              console.error("Google sign-up failed:", err);
+              setServerError(err.response?.data?.error || "Google sign-up failed.");
+            }
           }}
           onError={() => console.log("Login Failed")}
           theme="filled_blue"
