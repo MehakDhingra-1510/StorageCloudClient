@@ -121,7 +121,6 @@ const Login = () => {
           onError={() => console.log("Login Failed")}
           theme="filled_blue"
           text="continue_with"
-          useOneTap
         />
       </div>
     </AuthLayout>
