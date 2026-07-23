@@ -21,6 +21,7 @@ import {
 } from "./api/directoryApi";
 
 import { deleteFile, renameFile, uploadInitiate, uploadComplete } from "./api/fileApi";
+import { notifyStorageChanged } from "./utils/storageEvents";
 import DetailsPopup from "./components/DetailsPopup";
 import ConfirmDeleteModal from "./components/ConfirmDeleteModel";
 
@@ -236,6 +237,7 @@ function DirectoryView() {
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           await uploadComplete(fileId);
+          notifyStorageChanged();
           setUploadItem(null);
           await refreshCurrent();
         } catch (err) {
@@ -330,13 +332,13 @@ function DirectoryView() {
   const filteredAndSortedItems = useMemo(() => {
     const combined = isSearching
       ? [
-          ...(searchResults?.directories || []).map((d) => ({ ...d, isDirectory: true })),
-          ...(searchResults?.files || []).map((f) => ({ ...f, isDirectory: false })),
-        ]
+        ...(searchResults?.directories || []).map((d) => ({ ...d, isDirectory: true })),
+        ...(searchResults?.files || []).map((f) => ({ ...f, isDirectory: false })),
+      ]
       : [
-          ...directoriesList.map((d) => ({ ...d, isDirectory: true })),
-          ...filesList.map((f) => ({ ...f, isDirectory: false })),
-        ];
+        ...directoriesList.map((d) => ({ ...d, isDirectory: true })),
+        ...filesList.map((f) => ({ ...f, isDirectory: false })),
+      ];
 
     const multiplier = sortOrder === "asc" ? 1 : -1;
     const getKey = (item) => {

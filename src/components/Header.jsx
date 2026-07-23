@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronDown, Menu, Share2, Trash2, Users, X } from "lucide-react";
 import { FaSignOutAlt, FaSignInAlt, FaCloud } from "react-icons/fa";
 import { fetchUser, logoutUser, logoutAllSessions } from "../api/userApi";
+import { onStorageChanged } from "../utils/storageEvents";
 import Logo from "./Logo";
 
 function Header() {
@@ -43,6 +44,11 @@ function Header() {
       }
     }
     loadUser();
+
+    // Re-fetch whenever another part of the app (upload complete, permanent
+    // delete) signals that storage usage may have changed, so the bar below
+    // doesn't stay stale until a full page reload.
+    return onStorageChanged(loadUser);
   }, []);
 
   useEffect(() => {
