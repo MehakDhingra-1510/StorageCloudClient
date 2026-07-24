@@ -1,125 +1,170 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { File as FileIcon, Folder, Users } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import Header from "./components/Header";
-import FilePreviewModal from "./components/FilePreviewModal";
-import { listSharedWithMe } from "./api/shareApi";
+import DirectoryList from "./components/DirectoryList";
+import Modal from "./components/Modal";
+import { DirectoryContext } from "./context/DirectoryContext";
+import { getTrashItems, restoreDirectory, permanentlyDeleteDirectory } from "./api/directoryApi";
+import { restoreFile, permanentlyDeleteFile } from "./api/fileApi";
+import { notifyStorageChanged } from "./utils/storageEvents";
 
-const BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
-
-function RoleBadge({ role }) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${
-        role === "editor"
-          ? "border-blue-200 bg-blue-50 text-blue-700"
-          : "border-slate-200 bg-slate-100 text-slate-600"
-      }`}
-    >
-      {role === "editor" ? "Can edit" : "Can view"}
-    </span>
-  );
-}
-
-function SharedWithMe() {
+function TrashView() {
   const navigate = useNavigate();
-  const [shares, setShares] = useState([]);
+  const [directoriesList, setDirectoriesList] = useState([]);
+  const [filesList, setFilesList] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [previewFile, setPreviewFile] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [permanentDeleteItem, setPermanentDeleteItem] = useState(null);
+  const [activeContextMenu, setActiveContextMenu] = useState(null);
+  const [viewMode] = useState("list");
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function load() {
+  async function loadTrash() {
     setLoading(true);
     try {
-      const data = await listSharedWithMe();
-      setShares(data);
+      const data = await getTrashItems();
+      setDirectoriesList(data.directories || []);
+      setFilesList(data.files || []);
     } catch (err) {
       if (err.response?.status === 401) navigate("/login");
-      else console.error("Failed to load shares:", err);
+      else setErrorMessage(err.response?.data?.error || err.message);
     } finally {
       setLoading(false);
     }
   }
 
-  function handleOpen(share) {
-    if (share.resourceType === "directory") {
-      navigate(`/drive/directory/${share.resourceId}`);
-    } else {
-      setPreviewFile({ id: share.resourceId, name: share.resourceName });
+  useEffect(() => {
+    loadTrash();
+  }, []);
+
+  useEffect(() => {
+    const handleDocumentClick = () => setActiveContextMenu(null);
+    document.addEventListener("click", handleDocumentClick);
+    return () => document.removeEventListener("click", handleDocumentClick);
+  }, []);
+
+  async function handleRestore(item) {
+    try {
+      if (item.isDirectory) await restoreDirectory(item.id);
+      else await restoreFile(item.id);
+      loadTrash();
+    } catch (err) {
+      setErrorMessage(err.response?.data?.error || err.message);
     }
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <Header />
-      <main className="max-w-5xl mx-auto p-4 sm:p-6">
-        <div className="mb-6">
-          <h1 className="font-display text-2xl font-semibold text-slate-900 tracking-tight">
-            Shared with me
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Files and folders other people have shared with your account.
-          </p>
-        </div>
+  async function handlePermanentDeleteConfirm() {
+    const item = permanentDeleteItem;
+    if (!item) return;
+    try {
+      if (item.isDirectory) await permanentlyDeleteDirectory(item.id);
+      else await permanentlyDeleteFile(item.id);
+      notifyStorageChanged();
+      setPermanentDeleteItem(null);
+      loadTrash();
+    } catch (err) {
+      setErrorMessage(err.response?.data?.error || err.message);
+      setPermanentDeleteItem(null);
+    }
+  }
 
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+  const items = [
+    ...directoriesList.map((d) => ({ ...d, isDirectory: true })),
+    ...filesList.map((f) => ({ ...f, isDirectory: false })),
+  ];
+
+  return (
+    <DirectoryContext.Provider
+      value={{
+        mode: "trash",
+        handleRowClick: () => { }, // items in trash aren't openable
+        activeContextMenu,
+        handleContextMenu: (e, id) => {
+          e.stopPropagation();
+          e.preventDefault();
+          setActiveContextMenu((prev) => (prev === id ? null : id));
+        },
+        isUploading: false,
+        progressMap: {},
+        handleCancelUpload: () => { },
+        onRestore: handleRestore,
+        onPermanentDelete: (item) => setPermanentDeleteItem(item),
+      }}
+    >
+      <div className="min-h-screen bg-slate-50">
+        <Header />
+
+        <main className="max-w-7xl mx-auto p-4">
+          <div className="mb-4">
+            <h1 className="font-display text-2xl font-semibold text-slate-900 tracking-tight">
+              Trash
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Items stay here until you restore or permanently delete them.
+            </p>
+          </div>
+
+          {errorMessage && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-center text-sm text-red-600">
+              {errorMessage}
+            </div>
+          )}
+
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600 mb-3" />
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="animate-spin rounded-full h-10 w-10 border-2 border-slate-200 border-t-blue-600 mb-4"></div>
               <p className="text-sm text-slate-500">Loading…</p>
             </div>
-          ) : shares.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
-                <Users className="h-6 w-6 text-slate-400" />
+          ) : items.length > 0 ? (
+            <DirectoryList items={items} viewMode={viewMode} />
+          ) : (
+            <div className="text-center py-16 sm:py-20">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+                <Trash2 className="w-7 h-7 text-slate-400" />
               </div>
-              <h3 className="font-display font-semibold text-slate-900 mb-1">
-                Nothing shared with you yet
+              <h3 className="font-display text-lg font-semibold text-slate-900 mb-1.5">
+                Trash is empty
               </h3>
-              <p className="text-sm text-slate-500 max-w-sm">
-                When someone shares a file or folder with your email, it'll show up here.
+              <p className="text-slate-500 text-sm">
+                Anything you delete from your drive shows up here first.
               </p>
             </div>
-          ) : (
-            <ul className="divide-y divide-slate-100">
-              {shares.map((share) => {
-                const Icon = share.resourceType === "directory" ? Folder : FileIcon;
-                return (
-                  <li
-                    key={share._id}
-                    onClick={() => handleOpen(share)}
-                    className="flex cursor-pointer items-center gap-3 px-5 py-3.5 transition-colors hover:bg-slate-50"
-                  >
-                    <Icon
-                      className={`h-5 w-5 shrink-0 ${
-                        share.resourceType === "directory" ? "text-blue-500" : "text-slate-400"
-                      }`}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-slate-900">
-                        {share.resourceName}
-                      </p>
-                      <p className="truncate text-xs text-slate-500">
-                        Shared by {share.ownerName || share.ownerEmail || "someone"}
-                      </p>
-                    </div>
-                    <RoleBadge role={share.role} />
-                  </li>
-                );
-              })}
-            </ul>
           )}
-        </div>
-      </main>
+        </main>
+      </div>
 
-      {previewFile && (
-        <FilePreviewModal file={previewFile} baseUrl={BASE_URL} onClose={() => setPreviewFile(null)} />
+      {permanentDeleteItem && (
+        <Modal
+          icon={Trash2}
+          tone="danger"
+          title={`Delete forever?`}
+          onClose={() => setPermanentDeleteItem(null)}
+          footer={
+            <>
+              <button
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                onClick={() => setPermanentDeleteItem(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+                onClick={handlePermanentDeleteConfirm}
+              >
+                Delete forever
+              </button>
+            </>
+          }
+        >
+          <p className="text-sm leading-relaxed text-slate-600">
+            <span className="font-medium text-slate-900">"{permanentDeleteItem.name}"</span>{" "}
+            will be permanently deleted{permanentDeleteItem.isDirectory ? ", along with everything inside it," : ""}{" "}
+            and can't be recovered.
+          </p>
+        </Modal>
       )}
-    </div>
+    </DirectoryContext.Provider>
   );
 }
 
-export default SharedWithMe;
+export default TrashView;

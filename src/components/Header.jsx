@@ -4,6 +4,7 @@ import { ChevronDown, Menu, Share2, Trash2, Users, X } from "lucide-react";
 import { FaSignOutAlt, FaSignInAlt, FaCloud } from "react-icons/fa";
 import { fetchUser, logoutUser, logoutAllSessions } from "../api/userApi";
 import { onStorageChanged } from "../utils/storageEvents";
+import { formatFileSize } from "../utils/helpers";
 import Logo from "./Logo";
 
 function Header() {
@@ -21,6 +22,12 @@ function Header() {
   const usedGB = usedStorageInBytes / 1024 ** 3;
   const totalGB = maxStorageInBytes / 1024 ** 3;
   const storagePercent = totalGB > 0 ? Math.min((usedGB / totalGB) * 100, 100) : 0;
+  // Real percentage for the tooltip/math, but a small visible floor for the
+  // bar itself — otherwise any usage under ~10 MB renders as a 0px-wide
+  // sliver that looks identical to "empty" or "broken".
+  const displayStoragePercent = storagePercent > 0 ? Math.max(storagePercent, 2) : 0;
+  const usedStorageLabel = formatFileSize(usedStorageInBytes);
+  const totalStorageLabel = formatFileSize(maxStorageInBytes);
 
   const userMenuRef = useRef(null);
   const shareMenuRef = useRef(null);
@@ -108,13 +115,13 @@ function Header() {
             {loggedIn && (
               <div
                 className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs text-slate-600"
-                title={`${usedGB.toFixed(2)} GB of ${totalGB.toFixed(0)} GB used`}
+                title={`${usedStorageLabel} of ${totalStorageLabel} used`}
               >
                 <FaCloud className="text-blue-500" />
                 <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-300">
                   <div
                     className="h-full rounded-full bg-blue-500 transition-all"
-                    style={{ width: `${storagePercent}%` }}
+                    style={{ width: `${displayStoragePercent}%` }}
                   />
                 </div>
               </div>
@@ -213,11 +220,11 @@ function Header() {
                           <div className="mb-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
                             <div
                               className="h-full rounded-full bg-blue-500"
-                              style={{ width: `${storagePercent}%` }}
+                              style={{ width: `${displayStoragePercent}%` }}
                             ></div>
                           </div>
                           <div className="text-xs text-slate-500">
-                            {usedGB.toFixed(2)} GB of {totalGB.toFixed(0)} GB used
+                            {usedStorageLabel} of {totalStorageLabel} used
                           </div>
                         </div>
                       </div>
