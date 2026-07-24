@@ -47,3 +47,10 @@ export const permanentlyDeleteDirectory = async (id) => {
   const { data } = await axiosWithCreds.delete(`/directory/${id}/permanent`);
   return data;
 };
+
+export const moveDirectory = async (id, newParentDirId) => {
+  const { data } = await axiosWithCreds.patch(`/directory/${id}/move`, {
+    newParentDirId,
+  });
+  return data;
+};

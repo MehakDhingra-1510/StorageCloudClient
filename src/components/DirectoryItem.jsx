@@ -1,4 +1,4 @@
-import { Download, Edit2, Eye, Info, MoreVertical, RotateCcw, Share2, Trash2 } from "lucide-react";
+import { Download, Edit2, Eye, Info, MoreVertical, Move, RotateCcw, Share2, Trash2 } from "lucide-react";
 import { useDirectoryContext } from "../context/DirectoryContext";
 import { formatDate, formatFileSize, getExtension, getFileIcon } from "../utils/helpers";
 
@@ -82,6 +82,13 @@ function DropdownMenu({ item, isUploadingItem, mode, onAction }) {
           <span>Rename</span>
         </button>
         <button
+          onClick={(e) => onAction(e, "move")}
+          className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+        >
+          <Move className="w-4 h-4 text-slate-400" />
+          <span>Move to</span>
+        </button>
+        <button
           onClick={(e) => onAction(e, "share")}
           className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
         >
@@ -111,6 +118,7 @@ function DirectoryItem({ item, uploadProgress, viewMode = "list" }) {
     handleCancelUpload,
     setDeleteItem,
     openRenameModal,
+    openMoveModal,
     openDetailsPopup,
     openPreview,
     openShareModal,
@@ -147,6 +155,9 @@ function DirectoryItem({ item, uploadProgress, viewMode = "list" }) {
         break;
       case "rename":
         openRenameModal(item.isDirectory ? "directory" : "file", item.id, item.name);
+        break;
+      case "move":
+        openMoveModal?.(item);
         break;
       case "share":
         openShareModal?.(item);
@@ -232,9 +243,8 @@ function DirectoryItem({ item, uploadProgress, viewMode = "list" }) {
             {isUploadingItem && (
               <div className="relative mt-1 w-full">
                 <span
-                  className={`absolute left-1/2 top-1/2 block -translate-x-1/2 -translate-y-1/2 text-[10px] font-medium ${
-                    uploadProgress > 50 ? "text-white" : "text-slate-600"
-                  }`}
+                  className={`absolute left-1/2 top-1/2 block -translate-x-1/2 -translate-y-1/2 text-[10px] font-medium ${uploadProgress > 50 ? "text-white" : "text-slate-600"
+                    }`}
                 >
                   {Math.floor(uploadProgress)}%
                 </span>

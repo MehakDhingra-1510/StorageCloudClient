@@ -9,6 +9,7 @@ import RenameModal from "./components/RenameModal";
 import DirectoryList from "./components/DirectoryList";
 import FilePreviewModal from "./components/FilePreviewModal";
 import ShareModal from "./components/ShareModal";
+import MoveModal from "./components/MoveModal";
 import { DirectoryContext } from "./context/DirectoryContext";
 import { FaExclamationTriangle } from "react-icons/fa";
 
@@ -59,6 +60,10 @@ function DirectoryView() {
   const [shareItem, setShareItem] = useState(null);
   const openShareModal = (item) => setShareItem(item);
   const closeShareModal = () => setShareItem(null);
+
+  const [moveItem, setMoveItem] = useState(null);
+  const openMoveModal = (item) => setMoveItem(item);
+  const closeMoveModal = () => setMoveItem(null);
 
   const [viewMode, setViewMode] = useState(
     () => localStorage.getItem("directoryViewMode") || "grid"
@@ -380,6 +385,7 @@ function DirectoryView() {
         openDetailsPopup,
         openPreview,
         openShareModal,
+        openMoveModal,
         mode: "normal",
         BASE_URL,
       }}
@@ -545,6 +551,10 @@ function DirectoryView() {
           )}
 
           {shareItem && <ShareModal item={shareItem} onClose={closeShareModal} />}
+
+          {moveItem && (
+            <MoveModal item={moveItem} onClose={closeMoveModal} onMoved={refreshCurrent} />
+          )}
         </main>
       </div>
     </DirectoryContext.Provider>

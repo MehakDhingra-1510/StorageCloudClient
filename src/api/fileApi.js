@@ -33,3 +33,10 @@ export const permanentlyDeleteFile = async (id) => {
   const { data } = await axiosWithCreds.delete(`/file/${id}/permanent`);
   return data;
 };
+
+export const moveFile = async (id, newParentDirId) => {
+  const { data } = await axiosWithCreds.patch(`/file/${id}/move`, {
+    newParentDirId,
+  });
+  return data;
+};
