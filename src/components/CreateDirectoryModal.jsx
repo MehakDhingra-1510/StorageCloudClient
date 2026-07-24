@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { FolderPlus } from "lucide-react";
 import Modal from "./Modal";
 
-function CreateDirectoryModal({ newDirname, setNewDirname, onClose, onCreateDirectory }) {
+function CreateDirectoryModal({ newDirname, setNewDirname, isSubmitting = false, onClose, onCreateDirectory }) {
   const inputRef = useRef(null);
   const formRef = useRef(null);
 
@@ -22,17 +22,19 @@ function CreateDirectoryModal({ newDirname, setNewDirname, onClose, onCreateDire
         <>
           <button
             type="button"
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
             onClick={onClose}
+            disabled={isSubmitting}
           >
             Cancel
           </button>
           <button
             type="submit"
             form="create-directory-form"
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            disabled={isSubmitting}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Create
+            {isSubmitting ? "Creating…" : "Create"}
           </button>
         </>
       }
