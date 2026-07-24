@@ -5,7 +5,12 @@ import Header from "./components/Header";
 import DirectoryList from "./components/DirectoryList";
 import Modal from "./components/Modal";
 import { DirectoryContext } from "./context/DirectoryContext";
-import { getTrashItems, restoreDirectory, permanentlyDeleteDirectory } from "./api/directoryApi";
+import {
+  getTrashItems,
+  restoreDirectory,
+  permanentlyDeleteDirectory,
+  emptyTrash,
+} from "./api/directoryApi";
 import { restoreFile, permanentlyDeleteFile } from "./api/fileApi";
 
 function TrashView() {
@@ -15,6 +20,8 @@ function TrashView() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [permanentDeleteItem, setPermanentDeleteItem] = useState(null);
+  const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false);
+  const [emptyingTrash, setEmptyingTrash] = useState(false);
   const [activeContextMenu, setActiveContextMenu] = useState(null);
   const [viewMode] = useState("list");
 
@@ -66,6 +73,20 @@ function TrashView() {
     }
   }
 
+  async function handleEmptyTrash() {
+    setEmptyingTrash(true);
+    try {
+      await emptyTrash();
+      setConfirmEmptyTrash(false);
+      loadTrash();
+    } catch (err) {
+      setErrorMessage(err.response?.data?.error || err.message);
+      setConfirmEmptyTrash(false);
+    } finally {
+      setEmptyingTrash(false);
+    }
+  }
+
   const items = [
     ...directoriesList.map((d) => ({ ...d, isDirectory: true })),
     ...filesList.map((f) => ({ ...f, isDirectory: false })),
@@ -75,7 +96,7 @@ function TrashView() {
     <DirectoryContext.Provider
       value={{
         mode: "trash",
-        handleRowClick: () => {}, // items in trash aren't openable
+        handleRowClick: () => { }, // items in trash aren't openable
         activeContextMenu,
         handleContextMenu: (e, id) => {
           e.stopPropagation();
@@ -84,7 +105,7 @@ function TrashView() {
         },
         isUploading: false,
         progressMap: {},
-        handleCancelUpload: () => {},
+        handleCancelUpload: () => { },
         onRestore: handleRestore,
         onPermanentDelete: (item) => setPermanentDeleteItem(item),
       }}
@@ -93,13 +114,24 @@ function TrashView() {
         <Header />
 
         <main className="max-w-7xl mx-auto p-4">
-          <div className="mb-4">
-            <h1 className="font-display text-2xl font-semibold text-slate-900 tracking-tight">
-              Trash
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Items stay here until you restore or permanently delete them.
-            </p>
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <h1 className="font-display text-2xl font-semibold text-slate-900 tracking-tight">
+                Trash
+              </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                Items stay here until you restore or permanently delete them.
+              </p>
+            </div>
+            {items.length > 0 && (
+              <button
+                onClick={() => setConfirmEmptyTrash(true)}
+                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-red-200 px-3.5 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Empty trash
+              </button>
+            )}
           </div>
 
           {errorMessage && (
@@ -158,6 +190,38 @@ function TrashView() {
             <span className="font-medium text-slate-900">"{permanentDeleteItem.name}"</span>{" "}
             will be permanently deleted{permanentDeleteItem.isDirectory ? ", along with everything inside it," : ""}{" "}
             and can't be recovered.
+          </p>
+        </Modal>
+      )}
+
+      {confirmEmptyTrash && (
+        <Modal
+          icon={Trash2}
+          tone="danger"
+          title="Empty trash?"
+          onClose={() => setConfirmEmptyTrash(false)}
+          footer={
+            <>
+              <button
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                onClick={() => setConfirmEmptyTrash(false)}
+                disabled={emptyingTrash}
+              >
+                Cancel
+              </button>
+              <button
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
+                onClick={handleEmptyTrash}
+                disabled={emptyingTrash}
+              >
+                {emptyingTrash ? "Emptying…" : "Empty trash"}
+              </button>
+            </>
+          }
+        >
+          <p className="text-sm leading-relaxed text-slate-600">
+            All {items.length} item{items.length === 1 ? "" : "s"} in your trash will be
+            permanently deleted and can't be recovered.
           </p>
         </Modal>
       )}
